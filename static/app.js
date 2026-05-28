@@ -46,8 +46,9 @@ function handleFile(file) {
   };
   reader.readAsDataURL(file);
 
-  fileInfo.textContent = `✓ ${file.name}  (${(file.size/1024).toFixed(1)} KB)`;
-  fileInfo.style.display = 'block';
+  // Ganti fileInfo lama dengan ini
+  document.getElementById('file-info-text').textContent = `✓ ${file.name}  (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('file-info-container').style.display = 'flex';
 
   btnAnalisis.disabled = false;
   btnText.textContent = 'Scan Nutrisi';
@@ -103,3 +104,23 @@ function resetHasil() {
   const ring = document.getElementById('score-ring');
   if (ring) ring.style.strokeDashoffset = 2 * Math.PI * 32;
 }
+
+// ── Fitur Hapus Foto ──
+document.getElementById('btn-hapus-foto').addEventListener('click', () => {
+  selectedFile = null;
+  imgPreview.src = '';
+  imgPreview.classList.remove('show');
+  document.getElementById('drop-placeholder').style.display = 'flex';
+  dropZone.classList.remove('has-image');
+  document.getElementById('file-info-container').style.display = 'none';
+  
+  btnAnalisis.disabled = true;
+  btnText.textContent = 'Pilih Gambar Dulu';
+  
+  // Reset input value agar bisa memilih file yang sama lagi
+  document.getElementById('file-input').value = '';
+  const camInput = document.getElementById('camera-input');
+  if (camInput) camInput.value = '';
+  
+  resetHasil();
+});

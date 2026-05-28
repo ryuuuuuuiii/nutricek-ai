@@ -529,7 +529,10 @@
     </div>
     <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none"/>
     <input id="file-input" type="file" accept="image/*" style="display:none"/>
-    <div id="file-info"></div>
+    <div id="file-info-container" style="display:none; align-items:center; justify-content:space-between; margin-top:10px; padding:8px 14px; border-radius:8px; background:var(--green-light); border: 1px solid #c2e0d1;">
+        <span id="file-info-text" style="font-size:0.78rem; color:var(--green); font-weight:500;"></span>
+        <button id="btn-hapus-foto" type="button" style="background:none; border:none; color:var(--red); font-size:1.5rem; cursor:pointer; line-height:0.5; padding:0 5px;" title="Hapus Foto">&times;</button>
+    </div>
     <button id="btn-analisis" disabled>
       <span class="spinner" id="spinner"></span>
       <span id="btn-text">Pilih Gambar Dulu</span>
@@ -800,14 +803,47 @@ window.renderHasil = function(d) {
   }
 
   // Donut chart
-  const donutData = [
-    { label: 'Gula',    value: n.gula_g         ?? 0, color: '#e74c3c' },
-    { label: 'Lemak',   value: n.lemak_g         ?? 0, color: '#f5a623' },
-    { label: 'Protein', value: n.protein_g       ?? 0, color: '#1a5fa8' },
-    { label: 'Serat',   value: n.serat_g         ?? 0, color: '#3cb371' },
-    // UBAH BARIS INI:
-    { label: 'Karbo Lainnya',   value: Math.max(0, (n.karbohidrat_g ?? 0) - (n.gula_g ?? 0) - (n.serat_g ?? 0)), color: '#f0a500' },
-  ].filter(x => x.value > 0);
+  // --- MULAI PERUBAHAN GRAFIK ---
+  const karboTotal = n.karbohidrat_g ?? 0;
+  const gula = n.gula_g ?? 0;
+  const serat = n.serat_g ?? 0;
+  const lemak = n.lemak_g ?? 0;
+  const protein = n.protein_g ?? 0;
+  const karboLainnya = Math.max(0, karboTotal - gula - serat);
+
+  // 1. Ekstrak berat total dari teks porsi_estimasi AI (misal "1 porsi (200g)")
+  let beratTotal = 0;
+  const porsiStr = d.porsi_estimasi || '';
+  const matchBerat = porsiStr.match(/(\d+)\s*(g|gram)/i);
+  if (matchBerat) {
+    beratTotal = parseFloat(matchBerat[1]);
+  }
+
+  // 2. Hitung total makro
+  const totalMakro = gula + lemak + protein + serat + karboLainnya;
+
+  // 3. Hitung bahan sisa (Air / Mineral / Abu)
+  let lainnya = 0;
+  if (beratTotal > totalMakro) {
+    lainnya = Math.round(beratTotal - totalMakro);
+  }
+
+  // 4. Susun data untuk Donut Chart
+  let donutData = [
+    { label: 'Gula',          value: gula,         color: '#e74c3c' },
+    { label: 'Lemak',         value: lemak,        color: '#f5a623' },
+    { label: 'Protein',       value: protein,      color: '#1a5fa8' },
+    { label: 'Serat',         value: serat,        color: '#3cb371' },
+    { label: 'Karbo Lainnya', value: karboLainnya, color: '#f0a500' }
+  ];
+
+  // Jika ada bahan sisa air/mineral, tambahkan ke grafik dengan warna abu-abu
+  if (lainnya > 0) {
+    donutData.push({ label: 'Air & Mineral', value: lainnya, color: '#d4cfc4' });
+  }
+
+  // Filter yang valuenya 0 agar tidak masuk chart
+  donutData = donutData.filter(x => x.value > 0);
   buildDonut(donutData);
 
   // Detail nutrisi
