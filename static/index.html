@@ -871,27 +871,22 @@ window.renderHasil = function(d) {
   }
 
  // --- MULAI PERUBAHAN GRAFIK YANG LEBIH PINTAR ---
-  const karboTotal = n.karbohidrat_g ?? 0;
+  // ── LOGIKA BARU: BERAT FULL + VARIABEL LAINNYA ──
   const gula = n.gula_g ?? 0;
-  const serat = n.serat_g ?? 0;
   const lemak = n.lemak_g ?? 0;
   const protein = n.protein_g ?? 0;
+  const serat = n.serat_g ?? 0;
+  const karboTotal = n.karbohidrat_g ?? 0;
   const karboLainnya = Math.max(0, karboTotal - gula - serat);
 
-  // 1. Ekstrak berat dengan Regex yang lebih kebal (baca g, gr, gram, dan desimal)
+  const totalMakro = gula + lemak + protein + serat + karboLainnya;
+
+  // 1. Ambil angka gram dari porsi_estimasi (misal: "1 sachet (30g)")
   let beratTotal = 0;
   const porsiStr = (d.porsi_estimasi || '').toLowerCase();
   const matchBerat = porsiStr.match(/(\d+(?:\.\d+)?)\s*(g|gr|gram)/);
   if (matchBerat) {
     beratTotal = parseFloat(matchBerat[1]);
-  }
-
-  const totalMakro = gula + lemak + protein + serat + karboLainnya;
-  let lainnya = 0;
-
-  // 2. Pastikan berat total dari AI masuk akal
-  if (beratTotal > totalMakro) {
-    lainnya = Math.round(beratTotal - totalMakro);
   }
 
   let donutData = [
@@ -902,16 +897,19 @@ window.renderHasil = function(d) {
     { label: 'Karbo Lainnya', value: karboLainnya, color: '#f0a500' }
   ];
 
-  // 3. Logika Teks Tengah Grafik
-  if (lainnya > 0) {
-    // Jika AI ngasih berat gram, masukkan Air & Mineral, tulis "per sajian"
-    donutData.push({ label: 'Air & Mineral', value: lainnya, color: '#d4cfc4' });
+  // 2. Hitung variabel "Lainnya" jika berat total fisik dari AI > total makro
+  if (beratTotal > totalMakro) {
+    const sisaLainnya = Math.round(beratTotal - totalMakro);
+    if (sisaLainnya > 0) {
+      donutData.push({ label: 'Lainnya', value: sisaLainnya, color: '#d4cfc4' });
+    }
     document.getElementById('donut-sub').textContent = 'per sajian';
   } else {
-    // Jika AI GAK ngasih berat gram, ubah teksnya biar gak menyesatkan
+    // Fallback jika AI tidak memberikan informasi berat gram sama sekali
     document.getElementById('donut-sub').textContent = 'Total Makro';
   }
 
+  // 3. Render ke Donut Chart
   donutData = donutData.filter(x => x.value > 0);
   buildDonut(donutData);
   // --- AKHIR PERUBAHAN GRAFIK ---
