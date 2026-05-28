@@ -45,7 +45,7 @@ function handleFile(file) {
   fileInfo.style.display = 'block';
 
   btnAnalisis.disabled = false;
-  btnText.textContent = 'SCAN NUTRISI';
+  btnText.textContent = 'Scan Nutrisi';
 }
 
 // ── Analisis ─────────────────────────────────────────────────────────────────
@@ -69,6 +69,7 @@ btnAnalisis.addEventListener('click', async () => {
     }
     if (data.error) { showError('⚠ ' + data.error); return; }
 
+    // renderHasil sudah di-override di index.html
     renderHasil(data);
   } catch (err) {
     console.error(err);
@@ -78,55 +79,11 @@ btnAnalisis.addEventListener('click', async () => {
   }
 });
 
-// ── Render hasil ─────────────────────────────────────────────────────────────
-function renderHasil(d) {
-  document.getElementById('hasil-nama').textContent  = d.nama_makanan   ?? '—';
-  document.getElementById('hasil-porsi').textContent = d.porsi_estimasi ?? '';
-  document.getElementById('hasil-kalori').textContent = d.kalori ?? '?';
-
-  const n = d.nutrisi ?? {};
-  document.getElementById('n-karbo').textContent   = n.karbohidrat_g ?? '?';
-  document.getElementById('n-protein').textContent = n.protein_g     ?? '?';
-  document.getElementById('n-lemak').textContent   = n.lemak_g       ?? '?';
-  document.getElementById('n-serat').textContent   = n.serat_g       ?? '?';
-
-  document.getElementById('hasil-catatan').textContent = d.catatan ?? '—';
-
-  // Alergen
-  const box = document.getElementById('alergen-list');
-  box.innerHTML = '';
-  const list = d.alergen_potensial ?? [];
-  if (!list.length) {
-    box.innerHTML = '<span style="font-family:IBM Plex Mono,monospace;font-size:.72rem;color:var(--text-dim)">tidak terdeteksi</span>';
-  } else {
-    list.forEach(a => {
-      const b = document.createElement('span');
-      b.className = 'alergen-badge';
-      b.textContent = a;
-      box.appendChild(b);
-    });
-  }
-
-  // Score ring
-  const skor = Math.min(10, Math.max(0, d.skor_kesehatan ?? 0));
-  document.getElementById('score-num').textContent = skor;
-  const ring = document.getElementById('score-ring');
-  const circ = 2 * Math.PI * 34;
-  const offset = circ - (skor / 10) * circ;
-  ring.style.stroke = skor >= 7 ? '#39ff14' : skor >= 4 ? '#ffb700' : '#ff3860';
-  setTimeout(() => { ring.style.strokeDashoffset = offset; }, 80);
-
-  // Show
-  hasilSection.style.display = 'flex';
-  requestAnimationFrame(() => hasilSection.classList.add('visible'));
-  hasilSection.scrollIntoView({ behavior: 'smooth' });
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function setLoading(on) {
   btnAnalisis.disabled = on;
   spinner.style.display = on ? 'block' : 'none';
-  btnText.textContent = on ? 'SCANNING...' : 'SCAN NUTRISI';
+  btnText.textContent = on ? 'Scanning...' : 'Scan Nutrisi';
 }
 function showError(msg) {
   errorBanner.textContent = msg;
@@ -138,5 +95,6 @@ function hideError() {
 function resetHasil() {
   hasilSection.style.display = 'none';
   hasilSection.classList.remove('visible');
-  document.getElementById('score-ring').style.strokeDashoffset = 2 * Math.PI * 34;
+  const ring = document.getElementById('score-ring');
+  if (ring) ring.style.strokeDashoffset = 2 * Math.PI * 32;
 }
