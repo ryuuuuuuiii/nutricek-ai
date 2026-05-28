@@ -870,8 +870,7 @@ window.renderHasil = function(d) {
     });
   }
 
-  // Donut chart
-  // --- MULAI PERUBAHAN GRAFIK ---
+ // --- MULAI PERUBAHAN GRAFIK YANG LEBIH PINTAR ---
   const karboTotal = n.karbohidrat_g ?? 0;
   const gula = n.gula_g ?? 0;
   const serat = n.serat_g ?? 0;
@@ -879,24 +878,22 @@ window.renderHasil = function(d) {
   const protein = n.protein_g ?? 0;
   const karboLainnya = Math.max(0, karboTotal - gula - serat);
 
-  // 1. Ekstrak berat total dari teks porsi_estimasi AI (misal "1 porsi (200g)")
+  // 1. Ekstrak berat dengan Regex yang lebih kebal (baca g, gr, gram, dan desimal)
   let beratTotal = 0;
-  const porsiStr = d.porsi_estimasi || '';
-  const matchBerat = porsiStr.match(/(\d+)\s*(g|gram)/i);
+  const porsiStr = (d.porsi_estimasi || '').toLowerCase();
+  const matchBerat = porsiStr.match(/(\d+(?:\.\d+)?)\s*(g|gr|gram)/);
   if (matchBerat) {
     beratTotal = parseFloat(matchBerat[1]);
   }
 
-  // 2. Hitung total makro
   const totalMakro = gula + lemak + protein + serat + karboLainnya;
-
-  // 3. Hitung bahan sisa (Air / Mineral / Abu)
   let lainnya = 0;
+
+  // 2. Pastikan berat total dari AI masuk akal
   if (beratTotal > totalMakro) {
     lainnya = Math.round(beratTotal - totalMakro);
   }
 
-  // 4. Susun data untuk Donut Chart
   let donutData = [
     { label: 'Gula',          value: gula,         color: '#e74c3c' },
     { label: 'Lemak',         value: lemak,        color: '#f5a623' },
@@ -905,14 +902,19 @@ window.renderHasil = function(d) {
     { label: 'Karbo Lainnya', value: karboLainnya, color: '#f0a500' }
   ];
 
-  // Jika ada bahan sisa air/mineral, tambahkan ke grafik dengan warna abu-abu
+  // 3. Logika Teks Tengah Grafik
   if (lainnya > 0) {
+    // Jika AI ngasih berat gram, masukkan Air & Mineral, tulis "per sajian"
     donutData.push({ label: 'Air & Mineral', value: lainnya, color: '#d4cfc4' });
+    document.getElementById('donut-sub').textContent = 'per sajian';
+  } else {
+    // Jika AI GAK ngasih berat gram, ubah teksnya biar gak menyesatkan
+    document.getElementById('donut-sub').textContent = 'Total Makro';
   }
 
-  // Filter yang valuenya 0 agar tidak masuk chart
   donutData = donutData.filter(x => x.value > 0);
   buildDonut(donutData);
+  // --- AKHIR PERUBAHAN GRAFIK ---
 
   // Detail nutrisi
   buildDetailNutrisi(n);
