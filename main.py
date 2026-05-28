@@ -12,7 +12,7 @@ load_dotenv()
 
 # ── Groq client ─────────────────────────────────────────────────────────────
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL = "llama-4-scout-17b-16e-instruct"
+MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # ── Prompt ───────────────────────────────────────────────────────────────────
 NUTRISI_PROMPT = """Kamu adalah ahli gizi profesional. Analisis gambar makanan ini.
