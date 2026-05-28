@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NutriCheck AI</title>
-  <link rel="icon" href="/lens.png" type="image/png">
+  <link rel="icon" href="/static/lens.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet"/>
   <style>
@@ -513,16 +513,21 @@
   <!-- UPLOAD -->
   <div class="card">
     <div class="card-title">Upload Gambar Makanan</div>
-    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div id="drop-zone">
       <img id="img-preview" alt="Preview"/>
       <div id="drop-placeholder">
         <div class="drop-icon">📷</div>
         <div class="drop-text">
-          <strong>Klik untuk pilih</strong> atau seret gambar ke sini<br/>
-          <span>JPG · PNG · WEBP · maks 10 MB</span>
+          <strong>Klik untuk pilih</strong> gambar makanan<br/>
+          <span>JPG · PNG · WEBP</span>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:10px; z-index: 10;">
+            <button type="button" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--green); background: white; color: var(--green); cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); document.getElementById('camera-input').click()">📷 Kamera</button>
+            <button type="button" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--green); background: white; color: var(--green); cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); document.getElementById('file-input').click()">📁 Galeri</button>
         </div>
       </div>
     </div>
+    <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none"/>
     <input id="file-input" type="file" accept="image/*" style="display:none"/>
     <div id="file-info"></div>
     <button id="btn-analisis" disabled>
@@ -800,7 +805,8 @@ window.renderHasil = function(d) {
     { label: 'Lemak',   value: n.lemak_g         ?? 0, color: '#f5a623' },
     { label: 'Protein', value: n.protein_g       ?? 0, color: '#1a5fa8' },
     { label: 'Serat',   value: n.serat_g         ?? 0, color: '#3cb371' },
-    { label: 'Karbo',   value: Math.max(0, (n.karbohidrat_g ?? 0) - (n.gula_g ?? 0) - (n.serat_g ?? 0)), color: '#f0a500' },
+    // UBAH BARIS INI:
+    { label: 'Karbo Lainnya',   value: Math.max(0, (n.karbohidrat_g ?? 0) - (n.gula_g ?? 0) - (n.serat_g ?? 0)), color: '#f0a500' },
   ].filter(x => x.value > 0);
   buildDonut(donutData);
 

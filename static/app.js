@@ -25,6 +25,11 @@ dropZone.addEventListener('drop', e => {
 fileInput.addEventListener('change', () => {
   if (fileInput.files[0]) handleFile(fileInput.files[0]);
 });
+// Tambahkan 4 baris ini
+const cameraInput = document.getElementById('camera-input');
+cameraInput.addEventListener('change', () => {
+  if (cameraInput.files[0]) handleFile(cameraInput.files[0]);
+});
 
 // ── Handle file ──────────────────────────────────────────────────────────────
 function handleFile(file) {
