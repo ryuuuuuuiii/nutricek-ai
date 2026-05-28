@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriCheck AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #080c10;
+      --surface:   #0d1117;
+      --border:    #1e2d3d;
+      --border2:   #0ff2;
+      --cyan:      #00f5ff;
+      --cyan-dim:  #00f5ff33;
+      --green:     #39ff14;
+      --green-dim: #39ff1422;
+      --amber:     #ffb700;
+      --red:       #ff3860;
+      --text:      #c9d8e8;
+      --text-dim:  #4a6070;
+      --glow-c:    0 0 20px #00f5ff66;
+      --glow-g:    0 0 20px #39ff1466;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Glow orbs ── */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #00f5ff0a 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: drift 12s ease-in-out infinite alternate;
+    }
+    @keyframes drift { to { transform: translate(100px, 150px); } }
+
+    /* ── Scanline overlay ── */
+    .scanlines {
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      position: relative; z-index: 10;
+      border-bottom: 1px solid var(--border);
+      background: #080c10e0;
+      backdrop-filter: blur(12px);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1.2rem;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+    }
+    .logo span { color: var(--text); }
+    .nav-badge {
+      margin-left: auto;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 3px 8px;
+      border-radius: 3px;
+      text-shadow: var(--glow-g);
+      animation: blink 2s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.4; } }
+
+    /* ── Main layout ── */
+    main {
+      position: relative; z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 40px 16px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Hero ── */
+    .hero { text-align: center; }
+    .hero h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 0.05em;
+      line-height: 1.2;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--cyan);
+      text-shadow: var(--glow-c);
+    }
+    .hero p {
+      margin-top: 10px;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.5;
+    }
+
+    /* ── Drop zone ── */
+    #drop-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+    #drop-zone.has-image { min-height: 240px; }
+
+    #img-preview {
+      display: none;
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 10px;
+      opacity: 0.85;
+    }
+    #img-preview.show { display: block; }
+
+    .drop-icon {
+      font-size: 2.5rem;
+      filter: drop-shadow(0 0 8px var(--cyan));
+    }
+    .drop-text {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .drop-text strong { color: var(--cyan); }
+    #drop-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+    /* ── File info ── */
+    #file-info {
+      display: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--green);
+      margin-top: 10px;
+      padding: 6px 12px;
+      border: 1px solid var(--green);
+      border-radius: 4px;
+      background: var(--green-dim);
+    }
+
+    /* ── Button ── */
+    #btn-analisis {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: transparent;
+      border: 1.5px solid var(--cyan);
+      color: var(--cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-shadow: var(--glow-c);
+    }
+    #btn-analisis:hover:not(:disabled) {
+      background: var(--cyan-dim);
+      box-shadow: var(--glow-c);
+    }
+    #btn-analisis:disabled {
+      border-color: var(--border);
+      color: var(--text-dim);
+      cursor: not-allowed;
+      text-shadow: none;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid var(--cyan-dim);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    #error-banner {
+      display: none;
+      background: #ff386015;
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--red);
+    }
+
+    /* ── Hasil section ── */
+    #hasil-section {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    #hasil-section.visible { opacity: 1; transform: none; }
+
+    .section-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: var(--cyan);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    /* ── Nama + skor ── */
+    .nama-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    #hasil-nama {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1.2rem, 4vw, 1.8rem);
+      font-weight: 700;
+      color: #fff;
+    }
+    #hasil-porsi {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Score ring */
+    .score-wrap {
+      position: relative;
+      width: 80px; height: 80px;
+      flex-shrink: 0;
+    }
+    .score-wrap svg { transform: rotate(-90deg); }
+    .score-inner {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    #score-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--cyan);
+      line-height: 1;
+    }
+    .score-label { font-size: 0.55rem; color: var(--text-dim); margin-top: 1px; }
+
+    /* ── Kalori bar ── */
+    .kalori-panel {
+      background: linear-gradient(135deg, #0d1f1a, #091510);
+      border: 1px solid #39ff1433;
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kalori-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--green);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    #hasil-kalori {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--green);
+      text-shadow: var(--glow-g);
+      line-height: 1;
+    }
+    .kalori-unit {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: #39ff1466;
+    }
+    .kalori-icon { font-size: 3rem; opacity: 0.2; }
+
+    /* ── Makro grid ── */
+    .makro-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (min-width: 480px) { .makro-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .makro-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+      transition: border-color .2s;
+    }
+    .makro-card:hover { border-color: var(--cyan); }
+    .makro-card .label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .makro-card .value {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 4px 0 2px;
+    }
+    .makro-card .unit {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+    }
+    .karbo  { color: #ffb700; }
+    .protein{ color: #00b4ff; }
+    .lemak  { color: #ff6b6b; }
+    .serat  { color: var(--green); }
+
+    /* ── Catatan & alergen ── */
+    #hasil-catatan {
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.7;
+      padding: 14px 16px;
+      background: #ffffff06;
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 6px 6px 0;
+    }
+
+    #alergen-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .alergen-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 3px;
+      background: #ffb70015;
+      border: 1px solid #ffb70055;
+      color: var(--amber);
+    }
+
+    /* ── Corner decorations ── */
+    .corner-tl, .corner-br {
+      position: absolute;
+      width: 16px; height: 16px;
+      border-color: var(--cyan);
+      border-style: solid;
+      opacity: 0.4;
+    }
+    .corner-tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+    .corner-br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+  </style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<!-- NAVBAR -->
+<nav>
+  <span style="font-size:1.3rem">⬡</span>
+  <span class="logo">NUTRI<span>CHECK</span> <span style="color:var(--text-dim);font-size:.7em">AI</span></span>
+  <span class="nav-badge">● GROQ ONLINE</span>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>ANALISIS <em>NUTRISI</em><br/>INSTAN</h1>
+    <p>&gt; upload foto makanan — AI scan kalori & gizi dalam detik_</p>
+  </div>
+
+  <!-- UPLOAD PANEL -->
+  <div class="panel">
+    <div class="corner-tl"></div>
+    <div class="corner-br"></div>
+    <p class="section-title">// input gambar</p>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <img id="img-preview" alt="Preview"/>
+      <div id="drop-placeholder">
+        <div class="drop-icon">⬡</div>
+        <div class="drop-text">
+          <strong>KLIK</strong> atau seret gambar ke sini<br/>
+          <span>JPG · PNG · WEBP · maks 10 MB</span>
+        </div>
+      </div>
+    </div>
+
+    <input id="file-input" type="file" accept="image/*" style="display:none"/>
+    <div id="file-info"></div>
+
+    <button id="btn-analisis" disabled>
+      <span class="spinner" id="spinner"></span>
+      <span id="btn-text">PILIH GAMBAR DULU</span>
+    </button>
+  </div>
+
+  <!-- ERROR -->
+  <div id="error-banner"></div>
+
+  <!-- HASIL -->
+  <div id="hasil-section">
+
+    <!-- Nama + Skor -->
+    <div class="panel">
+      <div class="corner-tl"></div>
+      <p class="section-title">// deteksi makanan</p>
+      <div class="nama-row">
+        <div>
+          <div id="hasil-nama"></div>
+          <div id="hasil-porsi"></div>
+        </div>
+        <div class="score-wrap">
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="40" cy="40" r="34" fill="none" stroke="#1e2d3d" stroke-width="7"/>
+            <circle id="score-ring" cx="40" cy="40" r="34" fill="none"
+                    stroke="#00f5ff" stroke-width="7" stroke-linecap="round"
+                    stroke-dasharray="213.6" stroke-dashoffset="213.6"
+                    style="transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke .4s"/>
+          </svg>
+          <div class="score-inner">
+            <span id="score-num">0</span>
+            <span class="score-label">/10</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kalori -->
+    <div class="kalori-panel">
+      <div>
+        <div class="kalori-label">▸ total kalori</div>
+        <div id="hasil-kalori">0</div>
+        <div class="kalori-unit">KKAL / PORSI</div>
+      </div>
+      <div class="kalori-icon">🔋</div>
+    </div>
+
+    <!-- Makro -->
+    <div class="panel">
+      <p class="section-title">// makronutrien</p>
+      <div class="makro-grid">
+        <div class="makro-card">
+          <div class="label">Karbo</div>
+          <div class="value karbo" id="n-karbo">—</div>
+          <div class="unit">gram</div>
+        </div>
+        <div class="makro-card">
+          <div class="label">Protein</div>
+          <div class="value protein" id="n-protein">—</div>
+          <div class="unit">gram</div>
+        </div>
+        <div class="makro-card">
+          <div class="label">Lemak</div>
+          <div class="value lemak" id="n-lemak">—</div>
+          <div class="unit">gram</div>
+        </div>
+        <div class="makro-card">
+          <div class="label">Serat</div>
+          <div class="value serat" id="n-serat">—</div>
+          <div class="unit">gram</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catatan & Alergen -->
+    <div class="panel">
+      <div class="corner-tl"></div>
+      <p class="section-title">// analisis & alergen</p>
+      <div id="hasil-catatan"></div>
+      <p class="section-title" style="margin-top:16px">// potensi alergen</p>
+      <div id="alergen-list"></div>
+    </div>
+
+  </div><!-- /hasil-section -->
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
