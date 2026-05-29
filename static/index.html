@@ -637,6 +637,19 @@
 
         <!-- Detail nutrisi -->
         <div class="detail-nutrisi" id="detail-nutrisi"></div>
+
+        <div id="row-lainnya" class="nutrisi-row" style="display: none; border-top: 1px solid var(--border);">
+          <div class="nutrisi-top">
+            <span class="nutrisi-nama" style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 10px; height: 10px; background: #d4cfc4; border-radius: 50%;"></span>
+              Lainnya (Air, Mineral, dll)
+            </span>
+            <div class="nutrisi-right">
+              <span id="val-lainnya" class="nutrisi-val" style="font-weight: 600;">0g</span>
+              <span class="tier-badge tier-ok">Normal</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -830,11 +843,11 @@ function getSkorTier(skor) {
 }
 
 // ── Hook ke renderHasil ───────────────────────────────────────────────────────
+// ── Hook ke renderHasil ───────────────────────────────────────────────────────
 const _orig = window.renderHasil;
 window.renderHasil = function(d) {
   // Panggil renderHasil asli dari app.js
   document.getElementById('hasil-nama').textContent  = d.nama_makanan   ?? '—';
-  document.getElementById('hasil-porsi').textContent = d.porsi_estimasi ?? '';
   document.getElementById('hasil-kalori').textContent = d.kalori ?? '?';
   document.getElementById('hasil-catatan').textContent = d.catatan ?? '—';
 
@@ -870,8 +883,7 @@ window.renderHasil = function(d) {
     });
   }
 
- // --- MULAI PERUBAHAN GRAFIK YANG LEBIH PINTAR ---
-  // ── LOGIKA BARU: BERAT FULL + VARIABEL LAINNYA ──
+  // --- REVISI UTAMA: GRAFIK & DETEKSI BERAT TEXT ---
   const gula = n.gula_g ?? 0;
   const lemak = n.lemak_g ?? 0;
   const protein = n.protein_g ?? 0;
@@ -881,12 +893,18 @@ window.renderHasil = function(d) {
 
   const totalMakro = gula + lemak + protein + serat + karboLainnya;
 
-  // 1. Ambil angka gram dari porsi_estimasi (misal: "1 sachet (30g)")
+  // 1. Ekstrak angka gram dari estimasi porsi (misal: "1 sachet (30g)")
   let beratTotal = 0;
   const porsiStr = (d.porsi_estimasi || '').toLowerCase();
   const matchBerat = porsiStr.match(/(\d+(?:\.\d+)?)\s*(g|gr|gram)/);
   if (matchBerat) {
     beratTotal = parseFloat(matchBerat[1]);
+  }
+
+  // REQUEST 1: Ubah tulisan porsi (misal "1 sachet") jadi murni gram jika terdeteksi
+  const porsiEl = document.getElementById('hasil-porsi');
+  if (porsiEl) {
+    porsiEl.textContent = beratTotal > 0 ? `${beratTotal} gram` : (d.porsi_estimasi ?? '');
   }
 
   let donutData = [
@@ -897,27 +915,38 @@ window.renderHasil = function(d) {
     { label: 'Karbo Lainnya', value: karboLainnya, color: '#f0a500' }
   ];
 
-  // 2. Hitung variabel "Lainnya" jika berat total fisik dari AI > total makro
+  // 2. Hitung variabel "Lainnya" jika berat total fisik dari AI > total makro nutrisi
+  let sisaLainnya = 0;
   if (beratTotal > totalMakro) {
-    const sisaLainnya = Math.round(beratTotal - totalMakro);
+    sisaLainnya = Math.round(beratTotal - totalMakro);
     if (sisaLainnya > 0) {
       donutData.push({ label: 'Lainnya', value: sisaLainnya, color: '#d4cfc4' });
     }
     document.getElementById('donut-sub').textContent = 'per sajian';
   } else {
-    // Fallback jika AI tidak memberikan informasi berat gram sama sekali
     document.getElementById('donut-sub').textContent = 'Total Makro';
   }
 
-  // 3. Render ke Donut Chart
+  // REQUEST 2: Sembunyikan/Munculkan detail teks "Lainnya" di bawah list nutrisi
+  const rowLainnya = document.getElementById('row-lainnya');
+  const valLainnya = document.getElementById('val-lainnya');
+  if (sisaLainnya > 0) {
+    if (rowLainnya && valLainnya) {
+      valLainnya.textContent = `${sisaLainnya}g`;
+      rowLainnya.style.display = 'flex'; // Munculkan baris dengan display flex
+    }
+  } else {
+    if (rowLainnya) rowLainnya.style.display = 'none'; // Sembunyikan jika pas
+  }
+
+  // 3. Render ke Donut Chart grafik
   donutData = donutData.filter(x => x.value > 0);
   buildDonut(donutData);
-  // --- AKHIR PERUBAHAN GRAFIK ---
 
-  // Detail nutrisi
+  // Detail nutrisi bawaan
   buildDetailNutrisi(n);
 
-  // Tampilkan
+  // Tampilkan section hasil
   const hasilSection = document.getElementById('hasil-section');
   hasilSection.style.display = 'flex';
   requestAnimationFrame(() => hasilSection.classList.add('visible'));
