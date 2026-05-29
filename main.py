@@ -49,8 +49,28 @@ async def analisis_makanan(file: UploadFile = File(...)):
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Ukuran gambar maksimal 10 MB.")
 
-    # Encode base64
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+    # --- PERBAIKAN ROTASI EXIF HP ---
+    from PIL import Image, ImageOps
+    import io
+
+    try:
+        # Buka gambar menggunakan Pillow
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        # Otomatis meluruskan gambar berdasarkan data EXIF bawaan kamera HP
+        img = ImageOps.exif_transpose(img)
+        
+        # Simpan kembali ke dalam memory (buffer) sebagai bytes
+        img_buffer = io.BytesIO()
+        # Simpan dengan format aslinya, atau default ke JPEG
+        img.save(img_buffer, format=img.format or "JPEG")
+        image_bytes_fixed = img_buffer.getvalue()
+    except Exception:
+        # Jika gagal memproses (misal file korup), kembali pakai file aslinya
+        image_bytes_fixed = image_bytes
+
+    # Encode base64 menggunakan gambar yang sudah diluruskan
+    image_b64 = base64.b64encode(image_bytes_fixed).decode("utf-8")
     media_type = file.content_type
 
     try:
@@ -74,7 +94,7 @@ async def analisis_makanan(file: UploadFile = File(...)):
                 }
             ],
             max_tokens=1024,
-            temperature=0.1,
+            temperature=0.0,
         )
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Groq API error: {str(e)}")
